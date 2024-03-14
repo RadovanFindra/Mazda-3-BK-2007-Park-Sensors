@@ -221,6 +221,7 @@
                 "C:\\Users\\findr\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.14\\libraries\\SPI\\src",
                 "C:\\Users\\findr\\Documents\\Arduino\\libraries\\FS\\src",
                 "C:\\Users\\findr\\Documents\\Arduino\\libraries\\SPIFFS\\src",
+                "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src",
                 "c:\\users\\findr\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0",
                 "c:\\users\\findr\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\xtensa-esp32-elf",
                 "c:\\users\\findr\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\backward",

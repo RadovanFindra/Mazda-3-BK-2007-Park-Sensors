@@ -230,4 +230,11 @@ E:\OneDrive\ -\ Žilinská\ univerzita\ v\ Žiline\VVS\Mazda-3-BK-2007-Park-Sensors
  C:\Users\findr\Documents\Arduino\libraries\TFT_eSPI/Extensions/Touch.h \
  C:\Users\findr\Documents\Arduino\libraries\TFT_eSPI/Extensions/Smooth_font.h \
  C:\Users\findr\Documents\Arduino\libraries\TFT_eSPI/Extensions/Button.h \
- C:\Users\findr\Documents\Arduino\libraries\TFT_eSPI/Extensions/Sprite.h
+ C:\Users\findr\Documents\Arduino\libraries\TFT_eSPI/Extensions/Sprite.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/PNGdec.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/zutil.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/zlib.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/zconf.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/inftrees.h \
+ C:\Users\findr\Documents\Arduino\libraries\PNGdec\src/inflate.h \
+ E:\OneDrive\ -\ Žilinská\ univerzita\ v\ Žiline\VVS\Mazda-3-BK-2007-Park-Sensors\build\sketch\Mazda3.h

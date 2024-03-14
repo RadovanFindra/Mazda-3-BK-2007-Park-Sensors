@@ -1,27 +1,51 @@
 #include <Arduino.h>
 #line 1 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 #include <TFT_eSPI.h>
+
+#include <PNGdec.h>
+#include "Mazda3.h"
+
 TFT_eSPI tft = TFT_eSPI();
 
+PNG png;
 
 int trigPin = 27;  // Trigger
 int echoPin = 22;  // Echo
 long duration, cm, inches;
 
-#line 9 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
+int16_t xpos = 0;
+int16_t ypos = 0;
+
+#line 17 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 void setup();
-#line 21 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
+#line 43 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 void loop(void);
-#line 9 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
+#line 77 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
+void pngDraw(PNGDRAW *pDraw);
+#line 17 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 void setup() {
   Serial.begin(115200);
   pinMode(trigPin, OUTPUT);
 
   pinMode(echoPin, INPUT);
-  tft.init();
+  tft.begin();
   tft.setRotation(1);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.fillScreen(TFT_BLACK);
+  int16_t rc = png.openFLASH((uint8_t *)Mazda_3_BK_Back, sizeof(Mazda_3_BK_Back), pngDraw);
+  if (rc == PNG_SUCCESS) {
+    Serial.println("Successfully opened png file");
+    Serial.printf("image specs: (%d x %d), %d bpp, pixel type: %d\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType());
+    tft.startWrite();
+    uint32_t dt = millis();
+    rc = png.decode(NULL, 0);
+    Serial.print(millis() - dt); Serial.println("ms");
+    tft.endWrite();
+    // png.close(); // not needed for memory->memory decode
+  }
+  delay(3000);
+  tft.fillScreen(random(0x10000));
+ 
 }
 
 
@@ -51,3 +75,17 @@ void loop(void) {
   Serial.println(cm);
   delay(100);
 }
+
+//=========================================v==========================================
+//                                      pngDraw
+//====================================================================================
+// This next function will be called during decoding of the png file to
+// render each image line to the TFT.  If you use a different TFT library
+// you will need to adapt this function to suit.
+// Callback function to draw pixels to the display
+void pngDraw(PNGDRAW *pDraw) {
+  uint16_t lineBuffer[MAX_IMAGE_WIDTH];
+  png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+  tft.pushImage(xpos, ypos + pDraw->y, pDraw->iWidth, 1, lineBuffer);
+}
+

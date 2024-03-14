@@ -31,6 +31,11 @@
   },
   {
     "Sourcefile": "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\build\\sketch\\Mazda-3-BK-2007-Park-Sensors.ino.cpp",
+    "Include": "PNGdec.h",
+    "Includepath": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src"
+  },
+  {
+    "Sourcefile": "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\build\\sketch\\Mazda-3-BK-2007-Park-Sensors.ino.cpp",
     "Include": "",
     "Includepath": null
   },
@@ -56,6 +61,46 @@
   },
   {
     "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\SPIFFS\\src\\SPIFFS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\PNGdec.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\adler32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\crc32.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\infback.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\inffast.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\inflate.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\inftrees.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\findr\\Documents\\Arduino\\libraries\\PNGdec\\src\\zutil.c",
     "Include": "",
     "Includepath": null
   }
