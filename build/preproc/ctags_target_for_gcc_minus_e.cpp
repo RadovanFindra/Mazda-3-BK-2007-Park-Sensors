@@ -1,6 +1,6 @@
 # 1 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 # 2 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino" 2
-
+# 3 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino" 2
 # 4 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino" 2
 # 5 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino" 2
 
@@ -8,11 +8,11 @@ TFT_eSPI tft = TFT_eSPI();
 
 PNG png;
 
-int trigPin = 27; // Trigger
-int echoPin = 22; // Echo
+int trigPin = 22; // Trigger
+int echoPin = 27; // Echo
 long duration, cm, inches;
 
-int16_t xpos = 0;
+int16_t xpos = 60;
 int16_t ypos = 0;
 
 void setup() {
@@ -38,9 +38,9 @@ void setup() {
     Serial.print(millis() - dt); Serial.println("ms");
     tft.endWrite();
     // png.close(); // not needed for memory->memory decode
+  } else {
+    Serial.printf("png.open() failed, rc=%d\n", rc);
   }
-  delay(3000);
-  tft.fillScreen(random(0x10000));
 
 }
 
@@ -58,7 +58,7 @@ void loop(void) {
   // duration is the time (in microseconds) from the sending
   // of the ping to the reception of its echo off of an object.
   pinMode(echoPin, 0x01);
-  duration = pulseIn(echoPin, 0x1);
+  duration = pulseIn(echoPin, 0x1,35000);
 
   // Convert the time into a distance
   cm = (duration / 2) / 29.1; // Divide by 29.1 or multiply by 0.0343
@@ -66,7 +66,7 @@ void loop(void) {
   int x = 5;
   int y = 10;
   int fontNum = 2;
-  tft.setTextPadding(240);
+  tft.setTextPadding(20);
   tft.drawNumber(cm, x, y); // Left Aligned
   Serial.println(cm);
   delay(100);
@@ -80,7 +80,7 @@ void loop(void) {
 // you will need to adapt this function to suit.
 // Callback function to draw pixels to the display
 void pngDraw(PNGDRAW *pDraw) {
-  uint16_t lineBuffer[MAX_IMAGE_WIDTH];
-  png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+  uint16_t lineBuffer[240 /* Adjust for your images*/];
+  png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_LITTLE_ENDIAN, 0xffffffff);
   tft.pushImage(xpos, ypos + pDraw->y, pDraw->iWidth, 1, lineBuffer);
 }

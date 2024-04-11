@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #line 1 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
 #include <TFT_eSPI.h>
-
+#include "SPI.h"
 #include <PNGdec.h>
 #include "Mazda3.h"
 
@@ -9,11 +9,11 @@ TFT_eSPI tft = TFT_eSPI();
 
 PNG png;
 
-int trigPin = 27;  // Trigger
-int echoPin = 22;  // Echo
+int trigPin = 22;  // Trigger
+int echoPin = 27;  // Echo
 long duration, cm, inches;
-
-int16_t xpos = 0;
+#define MAX_IMAGE_WIDTH 240 // Adjust for your images
+int16_t xpos = 60;
 int16_t ypos = 0;
 
 #line 17 "E:\\OneDrive - Žilinská univerzita v Žiline\\VVS\\Mazda-3-BK-2007-Park-Sensors\\Mazda-3-BK-2007-Park-Sensors.ino"
@@ -42,9 +42,9 @@ void setup() {
     Serial.print(millis() - dt); Serial.println("ms");
     tft.endWrite();
     // png.close(); // not needed for memory->memory decode
+  } else {
+    Serial.printf("png.open() failed, rc=%d\n", rc);
   }
-  delay(3000);
-  tft.fillScreen(random(0x10000));
  
 }
 
@@ -62,7 +62,7 @@ void loop(void) {
   // duration is the time (in microseconds) from the sending
   // of the ping to the reception of its echo off of an object.
   pinMode(echoPin, INPUT);
-  duration = pulseIn(echoPin, HIGH);
+  duration = pulseIn(echoPin, HIGH,35000);
 
   // Convert the time into a distance
   cm = (duration / 2) / 29.1;  // Divide by 29.1 or multiply by 0.0343
@@ -70,7 +70,7 @@ void loop(void) {
   int x = 5;
   int y = 10;
   int fontNum = 2;
-  tft.setTextPadding(240);
+  tft.setTextPadding(20);
   tft.drawNumber(cm, x, y);  // Left Aligned
   Serial.println(cm);
   delay(100);
@@ -85,7 +85,7 @@ void loop(void) {
 // Callback function to draw pixels to the display
 void pngDraw(PNGDRAW *pDraw) {
   uint16_t lineBuffer[MAX_IMAGE_WIDTH];
-  png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+  png.getLineAsRGB565(pDraw, lineBuffer, PNG_RGB565_LITTLE_ENDIAN, 0xffffffff);
   tft.pushImage(xpos, ypos + pDraw->y, pDraw->iWidth, 1, lineBuffer);
 }
 
