@@ -1,6 +1,17 @@
 #include <TFT_eSPI.h>
 #include "Mazda3.h"
 #include "Wire.h"
+#include <SPI.h>
+#include <XPT2046_Touchscreen.h>
+
+#define XPT2046_IRQ 36
+#define XPT2046_MOSI 32
+#define XPT2046_MISO 39
+#define XPT2046_CLK 25
+#define XPT2046_CS 33
+
+SPIClass mySpi = SPIClass(VSPI);
+XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
 // Minimálna a maximálna vzdialenosť meraná senzormi
 const int MIN_DISTANCE = 20;
@@ -54,6 +65,8 @@ int DownRight_Last;
 int Left_Last;
 int Right_Last;
 
+TaskHandle_t Measurement;
+
 /**
  * @brief Vytvorí obrázok vozidla na displeji.
  * 
@@ -99,7 +112,7 @@ void setup_sensors() {
   for (int i = 0; i < sizeof(sensors) / sizeof(sensors[0]); ++i) {
     sensors[i].num = i;
     sensors[i].duration = MIN_DISTANCE;
-    sensors[i].trig = i * 2;
+    sensors[i].trig = 2 * i + 1;  // Corrected trig assignment
     sensors[i].waiting = false;
 
     sensors[i].text.createSprite(20, 10);
@@ -108,8 +121,8 @@ void setup_sensors() {
     sensors[i].text.setTextDatum(MC_DATUM);
 
     Mode(sensors[i].trig, OUTPUT);
-    Mode(sensors[i].trig + 1, OUTPUT);
-    Write(sensors[i].trig + 1, HIGH);
+    Mode(sensors[i].trig - 1, OUTPUT);  // Use trig - 1 for echo
+    Write(sensors[i].trig - 1, HIGH);
     sensors[i].waiting = false;
 
     if (i < sizeof(sensors) / sizeof(sensors[0]) - 1) {
@@ -120,6 +133,15 @@ void setup_sensors() {
   }
   current = &sensors[0];
   pinMode(_interruptPin, INPUT_PULLUP);
+
+  xTaskCreatePinnedToCore(
+    Masure,         /* Function to implement the task */
+    "Measurements", /* Name of the task */
+    10000,          /* Stack size in words */
+    NULL,           /* Task input parameter */
+    0,              /* Priority of the task */
+    &Measurement,   /* Task handle. */
+    0);             /* Core where the task should run */
 }
 
 /**
@@ -137,6 +159,30 @@ void setup() {
   createVehicleBack();
   Wire.begin();
   setup_sensors();
+
+  mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+  ts.begin(mySpi);
+  ts.setRotation(1);
+}
+
+void printTouchToSerial(TS_Point p) {
+  Serial.print("Pressure = ");
+  Serial.print(p.z);
+  Serial.print(", x = ");
+  Serial.print(p.x);
+  Serial.print(", y = ");
+  Serial.print(p.y);
+  Serial.println();
+}
+
+
+void Masure(void *parameter) {
+  for (;;) {
+    if (!current->waiting) {
+      doSonar();
+      delay(5);
+    }
+  }
 }
 
 /**
@@ -148,64 +194,67 @@ void setup() {
  * ktorá vykonáva sonarovanie.
  */
 void loop() {
-  if (!current->waiting) {                                                                        // Ak senzor nie je v stave čakania
-    current->text.fillSprite(TFT_BLACK);                                                          // Vyčistí obrazovku pre aktuálny senzor
-    int distance = current->duration;                                                             // Získa aktuálnu vzdialenosť od senzora
-    current->text.drawNumber(distance, current->text.width() >> 1, current->text.height() >> 1);  // Zobrazí vzdialenosť na displeji
-    int x;
-    int y;
-    // Zistí súradnice zobrazenia na displeji pre aktuálny senzor
-    switch (current->num) {
-      case 0:
-        x = 50;
-        y = 10;
-        // Aktualizuje zobrazenie na displeji pre senzor 0
-        update(0, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
-        break;
-      case 1:
-        x = 100;
-        y = 80;
-        // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
-        if (distance <= sensors[3].duration) {
-          update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-        }
-        break;
-      case 2:
-        x = 200;
-        y = 80;
-        // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
-        // Serial.print("DIS: ");
-        // Serial.println(distance);
-        // Serial.println();
-        // Serial.print("DIS3: ");
-        // Serial.println(sensors[3].duration);
-        if (distance <= sensors[3].duration) {
-          update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-        }
-        break;
-      case 3:
-        x = 150;
-        y = 90;
-        // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
-        if (distance <= sensors[1].duration) {
-          update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-        }
-        // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
-        if (distance <= sensors[2].duration) {
-          update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-        }
-        break;
-      case 4:
-        x = 250;
-        y = 10;
-        // Aktualizuje zobrazenie na displeji pre senzor 3
-        update(3, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
-        break;
-    }
-    current->text.pushSprite(x, y);  // Zobrazí aktualizovaný sprite senzora na displeji
-    doSonar();                       // Vykoná sonarovanie pre aktuálny senzor
+  current->text.fillSprite(TFT_BLACK);                                                          // Vyčistí obrazovku pre aktuálny senzor
+  int distance = current->duration;                                                             // Získa aktuálnu vzdialenosť od senzora
+  current->text.drawNumber(distance, current->text.width() >> 1, current->text.height() >> 1);  // Zobrazí vzdialenosť na displeji
+  int x;
+  int y;
+  // Zistí súradnice zobrazenia na displeji pre aktuálny senzor
+  switch (current->num) {
+    case 0:
+      x = 50;
+      y = 10;
+      // Aktualizuje zobrazenie na displeji pre senzor 0
+      update(0, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
+      break;
+    case 1:
+      x = 100;
+      y = 80;
+      // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
+      if (distance <= sensors[3].duration) {
+        update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
+      }
+      break;
+    case 2:
+      x = 200;
+      y = 80;
+      // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
+      // Serial.print("DIS: ");
+      // Serial.println(distance);
+      // Serial.println();
+      // Serial.print("DIS3: ");
+      // Serial.println(sensors[3].duration);
+      if (distance <= sensors[3].duration) {
+        update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
+      }
+      break;
+    case 3:
+      x = 150;
+      y = 90;
+      // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
+      if (distance <= sensors[1].duration) {
+        update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
+      }
+      // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
+      if (distance <= sensors[2].duration) {
+        update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
+      }
+      break;
+    case 4:
+      x = 250;
+      y = 10;
+      // Aktualizuje zobrazenie na displeji pre senzor 3
+      update(3, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
+      break;
   }
-  delay(5);  // Krátka pauza pred ďalším prechodom hlavného cyklu
+  current->text.pushSprite(x, y);  // Zobrazí aktualizovaný sprite senzora na displeji
+                                   // Vykoná sonarovanie pre aktuálny senzor
+
+  if (ts.tirqTouched() && ts.touched()) {
+    TS_Point p = ts.getPoint();
+    printTouchToSerial(p);
+    delay(100);
+  }
 }
 
 /**
