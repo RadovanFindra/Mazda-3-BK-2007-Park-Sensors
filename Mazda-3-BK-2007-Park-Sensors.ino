@@ -144,25 +144,56 @@ void setup_sensors() {
     0);             /* Core where the task should run */
 }
 
-/**
- * @brief Inicializuje zariadenie.
- * 
- * Táto metóda inicializuje zariadenie. Nastaví sériovú komunikáciu,
- * inicializuje LCD displej, vytvorí vozidlo na displeji, inicializuje
- * senzory a nastaví prerušovací pin.
- */
+// /**
+//  * @brief Inicializuje zariadenie.
+//  * 
+//  * Táto metóda inicializuje zariadenie. Nastaví sériovú komunikáciu,
+//  * inicializuje LCD displej, vytvorí vozidlo na displeji, inicializuje
+//  * senzory a nastaví prerušovací pin.
+//  */
+// void setup() {
+//   Serial.begin(115200);
+//   lcd.init();
+//   lcd.fillScreen(TFT_BLACK);
+//   lcd.setRotation(1);
+//   createVehicleBack();
+//   Wire.begin();
+//   setup_sensors();
+
+//   mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+//   ts.begin(mySpi);
+//   ts.setRotation(1);
+// }
+TFT_eSprite leftTopReck = TFT_eSprite(&lcd);
+TFT_eSprite downLeftReck = TFT_eSprite(&lcd);
+TFT_eSprite downRightReck = TFT_eSprite(&lcd);
+TFT_eSprite rightTopReck = TFT_eSprite(&lcd);
 void setup() {
   Serial.begin(115200);
   lcd.init();
   lcd.fillScreen(TFT_BLACK);
-  lcd.setRotation(3);
-  createVehicleBack();
-  Wire.begin();
+  lcd.setRotation(1);
+  createVehicleBack(); // Vykreslíme pozadie len raz
+
+  Wire.begin(27,22);
   setup_sensors();
 
   mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
   ts.begin(mySpi);
   ts.setRotation(1);
+
+  // Inicializácia sprajtov pre indikátory
+  leftTopReck.createSprite(70, 120);
+  leftTopReck.fillSprite(TFT_GREEN); // Farba pozadia indikátora
+
+  downLeftReck.createSprite(154, 164);
+  downLeftReck.fillSprite(TFT_GREEN);
+
+  downRightReck.createSprite(154, 164);
+  downRightReck.fillSprite(TFT_GREEN);
+
+  rightTopReck.createSprite(70, 120);
+  rightTopReck.fillSprite(TFT_GREEN);
 }
 
 void printTouchToSerial(TS_Point p) {
@@ -180,192 +211,240 @@ void Masure(void *parameter) {
   for (;;) {
     if (!current->waiting) {
       doSonar();
-      delay(5);
+      delay(20);
     }
   }
 }
 
-/**
- * @brief Hlavná metóda loop.
- * 
- * Táto metóda sa volá neustále v hlavnom cykle programu. Ak aktuálny senzor
- * nie je v stave čakania, metóda aktualizuje zobrazenie aktuálnej vzdialenosti
- * na displeji pre daný senzor. Následne pre každý senzor volá metódu doSonar(),
- * ktorá vykonáva sonarovanie.
- */
+// 
 void loop() {
-  current->text.fillSprite(TFT_BLACK);                                                          // Vyčistí obrazovku pre aktuálny senzor
-  int distance = current->duration;                                                             // Získa aktuálnu vzdialenosť od senzora
-  current->text.drawNumber(distance, current->text.width() >> 1, current->text.height() >> 1);  // Zobrazí vzdialenosť na displeji
-  int x;
-  int y;
-  // Zistí súradnice zobrazenia na displeji pre aktuálny senzor
-  switch (current->num) {
-    case 0:
-      x = 50;
-      y = 10;
-      // Aktualizuje zobrazenie na displeji pre senzor 0
-      update(0, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
-      break;
-    case 1:
-      x = 100;
-      y = 80;
-      // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
-      if (distance <= sensors[3].duration) {
-        update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-      }
-      break;
-    case 2:
-      x = 200;
-      y = 80;
-      // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
-      // Serial.print("DIS: ");
-      // Serial.println(distance);
-      // Serial.println();
-      // Serial.print("DIS3: ");
-      // Serial.println(sensors[3].duration);
-      if (distance <= sensors[3].duration) {
-        update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-      }
-      break;
-    case 3:
-      x = 150;
-      y = 90;
-      // Aktualizuje zobrazenie na displeji pre senzor 1 (vľavo dole)
-      if (distance <= sensors[1].duration) {
-        update(1, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-      }
-      // Aktualizuje zobrazenie na displeji pre senzor 2 (vpravo dole)
-      if (distance <= sensors[2].duration) {
-        update(2, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE));
-      }
-      break;
-    case 4:
-      x = 250;
-      y = 10;
-      // Aktualizuje zobrazenie na displeji pre senzor 3
-      update(3, map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE));
-      break;
+  int distance = current->duration;
+  static int lastDistance[5] = {-1, -1, -1, -1, -1}; // Pole pre uchovanie posledných vzdialeností
+
+  if (distance != lastDistance[current->num]) {
+    current->text.fillSprite(TFT_BLACK);
+    current->text.drawNumber(distance, current->text.width() >> 1, current->text.height() >> 1);
+    int x, y;
+    switch (current->num) {
+      case 0: x = 50; y = 10; break;
+      case 1: x = 100; y = 80; break;
+      case 2: x = 200; y = 80; break;
+      case 3: x = 150; y = 90; break;
+      case 4: x = 250; y = 10; break;
+    }
+    current->text.pushSprite(x, y);
+    lastDistance[current->num] = distance;
   }
-  current->text.pushSprite(x, y);  // Zobrazí aktualizovaný sprite senzora na displeji
-                                   // Vykoná sonarovanie pre aktuálny senzor
+
+  int gridValue;
+  switch (current->num) {
+    case 0: gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE); update(0, gridValue); break;
+    case 1: if (distance <= sensors[3].duration) { gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE); update(1, gridValue); } break;
+    case 2: if (distance <= sensors[3].duration) { gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE); update(2, gridValue); } break;
+    case 3: if (distance <= sensors[1].duration) { gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE); update(1, gridValue); }
+            if (distance <= sensors[2].duration) { gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_BIG_GRID_VALUE, MIN_GRID_VALUE); update(2, gridValue); } break;
+    case 4: gridValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, MAX_SMALL_GRID_VALUE, MIN_GRID_VALUE); update(3, gridValue); break;
+  }
 
   if (ts.tirqTouched() && ts.touched()) {
     TS_Point p = ts.getPoint();
     printTouchToSerial(p);
     delay(100);
   }
+  // Možno pridať delay() na koniec loop() pre overenie rýchlosti cyklu
+   //delay(1000);
 }
 
-/**
- * @brief Aktualizuje zobrazenie na displeji pre daný mriežkový senzor.
- * 
- * Táto metóda aktualizuje zobrazenie mriežky na displeji na základe aktuálnej
- * úrovne signálu z mriežkového senzora a identifikátora mriežky.
- * 
- * @param grid Identifikátor mriežkového senzora.
- * @param level Aktuálna úroveň signálu z mriežkového senzora.
- */
+// /**
+//  * @brief Aktualizuje zobrazenie na displeji pre daný mriežkový senzor.
+//  * 
+//  * Táto metóda aktualizuje zobrazenie mriežky na displeji na základe aktuálnej
+//  * úrovne signálu z mriežkového senzora a identifikátora mriežky.
+//  * 
+//  * @param grid Identifikátor mriežkového senzora.
+//  * @param level Aktuálna úroveň signálu z mriežkového senzora.
+//  */
+// void update(int grid, int level) {
+//   int start = 155;  // Začiatočná pozícia pre kreslenie mriežky
+//   switch (grid) {
+//     case 0:
+
+//       // Aktualizuje zobrazenie pre mriežkový senzor 0 (vľavo hore)
+//       if (level >= 0 && Left_Last != level) {
+//         ++start;
+//         reck.createSprite(70, 120);  // Vytvorí sprite pre zobrazenie mriežky
+//         reck.fillSprite(TFT_GREEN);  // Vyplní sprite zelenou farbou
+
+//         // Kreslí oblúky pre jednotlivé úrovne signálu
+//         for (int i = 0; i < MAX_SMALL_GRID_VALUE; i++) {
+//           int arcColor = TFT_BLACK;  // Farba oblúku
+//           if (level >= (MAX_SMALL_GRID_VALUE - i)) {
+//             if (i == 0) arcColor = TFT_RED;  // Najbližšia úroveň (červená)
+//             else arcColor = TFT_ORANGE;      // Ostatné úrovne (oranžová)
+//           }
+//           int arcStart = start + (i * WIDTH) + (i * GAP);                                                   // Začiatočný uhol oblúka
+//           int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                               // Koncový uhol oblúka
+//           reck.drawSmoothArc(200, 0, arcEnd, arcStart, 65 + ((3 - i) * 3), 120, arcColor, arcColor, true);  // Kreslí oblúk
+//         }
+//         reck.pushSprite(0, 0, 0x07E0);  // Zobrazí sprite mriežky na displeji
+//         Left_Last = level;              // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+//       }
+//       break;
+//     case 1:
+//       // Aktualizuje zobrazenie pre mriežkový senzor 1 (vľavo dole)
+//       if (level >= 0 && DownLeft_Last != level) {
+//         reck.createSprite(154, 164);  // Vytvorí sprite pre zobrazenie mriežky
+//         reck.fillScreen(TFT_GREEN);   // Vyplní sprite zelenou farbou
+
+//         // Kreslí oblúky pre jednotlivé úrovne signálu
+//         for (int i = 0; i < MAX_BIG_GRID_VALUE; i++) {
+//           int arcColor = TFT_BLACK;  // Farba oblúku
+//           if (level >= (MAX_BIG_GRID_VALUE - i)) {
+//             if (i == 0) {
+//               arcColor = TFT_RED;                    // Najbližšia úroveň (červená)
+//             } else if (i >= 3) arcColor = TFT_BLUE;  // Vzdialené úrovne (modrá)
+//             else arcColor = TFT_ORANGE;              // Ostatné úrovne (oranžová)
+//           }
+//           int arcStart = start + (i * WIDTH) + (i * GAP);                                    // Začiatočný uhol oblúka
+//           int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                // Koncový uhol oblúka
+//           reck.drawSmoothArc(160, -120, arcEnd, arcStart, 0, 35, arcColor, arcColor, true);  // Kreslí oblúk
+//         }
+//         reck.pushSprite(0, 80, 0x07E0);  // Zobrazí sprite mriežky na displeji
+//         DownLeft_Last = level;           // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+//       }
+//       break;
+//     case 2:
+//       // Aktualizuje zobrazenie pre mriežkový senzor 2 (vpravo dole)
+//       // Serial.print("CASE");
+//       // Serial.println(level);
+//       // Serial.println();
+
+//       if (level >= 0 && DownRight_Last != level) {
+//         reck.createSprite(154, 164);  // Vytvorí sprite pre zobrazenie mriežky
+//         reck.fillScreen(TFT_GREEN);   // Vyplní sprite zelenou farbou
+
+//         // Kreslí oblúky pre jednotlivé úrovne signálu
+//         for (int i = 0; i < MAX_BIG_GRID_VALUE; i++) {
+//           int arcColor = TFT_BLACK;  // Farba oblúku
+//           if (level >= (MAX_BIG_GRID_VALUE - i)) {
+//             if (i == 0) {
+//               arcColor = TFT_RED;                    // Najbližšia úroveň (červená)
+//             } else if (i >= 3) arcColor = TFT_BLUE;  // Vzdialené úrovne (modrá)
+//             else arcColor = TFT_ORANGE;              // Ostatné úrovne (oranžová)
+//           }
+//           int arcStart = start + (i * WIDTH) + (i * GAP);                                    // Začiatočný uhol oblúka
+//           int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                // Koncový uhol oblúka
+//           reck.drawSmoothArc(-5, -120, arcEnd, arcStart, 325, 0, arcColor, arcColor, true);  // Kreslí oblúk
+//         }
+//         reck.pushSprite(165, 80, 0x07E0);  // Zobrazí sprite mriežky na displeji
+//         DownRight_Last = level;            // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+//       }
+//       break;
+//     case 3:
+//       // Aktualizuje zobrazenie pre mriežkový senzor 3 (vpravo hore)
+//       if (level >= 0 && Right_Last != level) {
+//         ++start;
+//         reck.createSprite(70, 120);  // Vytvorí sprite pre zobrazenie mriežky
+//         reck.fillSprite(TFT_GREEN);  // Vyplní sprite zelenou farbou
+
+//         // Kreslí oblúky pre jednotlivé úrovne signálu
+//         for (int i = 0; i < MAX_SMALL_GRID_VALUE; i++) {
+//           int arcColor = TFT_BLACK;  // Farba oblúku
+//           if (level >= (MAX_SMALL_GRID_VALUE - i)) {
+//             if (i == 0) arcColor = TFT_RED;  // Najbližšia úroveň (červená)
+//             else arcColor = TFT_ORANGE;      // Ostatné úrovne (oranžová)
+//           }
+//           int arcStart = start + (i * WIDTH) + (i * GAP);                                                     // Začiatočný uhol oblúka
+//           int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                                 // Koncový uhol oblúka
+//           reck.drawSmoothArc(-130, 0, arcEnd, arcStart, 240, 300 - ((3 - i) * 3), arcColor, arcColor, true);  // Kreslí oblúk
+//         }
+//         reck.pushSprite(250, 0, 0x07E0);  // Zobrazí sprite mriežky na displeji
+//         Right_Last = level;               // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+//       }
+//       break;
+//   }
+//   reck.deleteSprite();  // Odstráni sprite po použití
+// }
+
 void update(int grid, int level) {
-  int start = 155;  // Začiatočná pozícia pre kreslenie mriežky
+  int start = 155; // Začiatočná pozícia pre kreslenie mriežky (táto sa môže líšiť)
   switch (grid) {
     case 0:
-
-      // Aktualizuje zobrazenie pre mriežkový senzor 0 (vľavo hore)
       if (level >= 0 && Left_Last != level) {
-        ++start;
-        reck.createSprite(70, 120);  // Vytvorí sprite pre zobrazenie mriežky
-        reck.fillSprite(TFT_GREEN);  // Vyplní sprite zelenou farbou
-
-        // Kreslí oblúky pre jednotlivé úrovne signálu
         for (int i = 0; i < MAX_SMALL_GRID_VALUE; i++) {
-          int arcColor = TFT_BLACK;  // Farba oblúku
+          int arcColor = TFT_BLACK;
           if (level >= (MAX_SMALL_GRID_VALUE - i)) {
-            if (i == 0) arcColor = TFT_RED;  // Najbližšia úroveň (červená)
-            else arcColor = TFT_ORANGE;      // Ostatné úrovne (oranžová)
+            if (i == 0) arcColor = TFT_RED;
+            else arcColor = TFT_ORANGE;
           }
-          int arcStart = start + (i * WIDTH) + (i * GAP);                                                   // Začiatočný uhol oblúka
-          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                               // Koncový uhol oblúka
-          reck.drawSmoothArc(200, 0, arcEnd, arcStart, 65 + ((3 - i) * 3), 120, arcColor, arcColor, true);  // Kreslí oblúk
+          int arcStart = start + (i * WIDTH) + (i * GAP);
+          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);
+          // Vyčistíme len oblasť, kde bol predtým oblúk a kde bude nový
+          leftTopReck.drawSmoothArc(200, 0, arcEnd, arcStart, 65 + ((3 - i) * 3), 120, TFT_GREEN, TFT_GREEN, true); // Prekreslíme pozadím
+          leftTopReck.drawSmoothArc(200, 0, arcEnd, arcStart, 65 + ((3 - i) * 3), 120, arcColor, arcColor, true);
         }
-        reck.pushSprite(0, 0, 0x07E0);  // Zobrazí sprite mriežky na displeji
-        Left_Last = level;              // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+        leftTopReck.pushSprite(0, 0, 0x07E0); // Predpokladaná pozícia, uprav podľa potreby
+        Left_Last = level;
       }
       break;
     case 1:
-      // Aktualizuje zobrazenie pre mriežkový senzor 1 (vľavo dole)
       if (level >= 0 && DownLeft_Last != level) {
-        reck.createSprite(154, 164);  // Vytvorí sprite pre zobrazenie mriežky
-        reck.fillScreen(TFT_GREEN);   // Vyplní sprite zelenou farbou
-
-        // Kreslí oblúky pre jednotlivé úrovne signálu
         for (int i = 0; i < MAX_BIG_GRID_VALUE; i++) {
-          int arcColor = TFT_BLACK;  // Farba oblúku
+          int arcColor = TFT_BLACK;
           if (level >= (MAX_BIG_GRID_VALUE - i)) {
-            if (i == 0) {
-              arcColor = TFT_RED;                    // Najbližšia úroveň (červená)
-            } else if (i >= 3) arcColor = TFT_BLUE;  // Vzdialené úrovne (modrá)
-            else arcColor = TFT_ORANGE;              // Ostatné úrovne (oranžová)
+            if (i == 0) arcColor = TFT_RED;
+            else if (i >= 3) arcColor = TFT_BLUE;
+            else arcColor = TFT_ORANGE;
           }
-          int arcStart = start + (i * WIDTH) + (i * GAP);                                    // Začiatočný uhol oblúka
-          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                // Koncový uhol oblúka
-          reck.drawSmoothArc(160, -120, arcEnd, arcStart, 0, 35, arcColor, arcColor, true);  // Kreslí oblúk
+          int arcStart = start + (i * WIDTH) + (i * GAP);
+          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);
+          // Vyčistíme len oblasť oblúka
+          downLeftReck.drawSmoothArc(160, -120, arcEnd, arcStart, 0, 35, TFT_GREEN, TFT_GREEN, true);
+          downLeftReck.drawSmoothArc(160, -120, arcEnd, arcStart, 0, 35, arcColor, arcColor, true);
         }
-        reck.pushSprite(0, 80, 0x07E0);  // Zobrazí sprite mriežky na displeji
-        DownLeft_Last = level;           // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+        downLeftReck.pushSprite(0, 80, 0x07E0); // Predpokladaná pozícia
+        DownLeft_Last = level;
       }
       break;
     case 2:
-      // Aktualizuje zobrazenie pre mriežkový senzor 2 (vpravo dole)
-      // Serial.print("CASE");
-      // Serial.println(level);
-      // Serial.println();
-
       if (level >= 0 && DownRight_Last != level) {
-        reck.createSprite(154, 164);  // Vytvorí sprite pre zobrazenie mriežky
-        reck.fillScreen(TFT_GREEN);   // Vyplní sprite zelenou farbou
-
-        // Kreslí oblúky pre jednotlivé úrovne signálu
         for (int i = 0; i < MAX_BIG_GRID_VALUE; i++) {
-          int arcColor = TFT_BLACK;  // Farba oblúku
+          int arcColor = TFT_BLACK;
           if (level >= (MAX_BIG_GRID_VALUE - i)) {
-            if (i == 0) {
-              arcColor = TFT_RED;                    // Najbližšia úroveň (červená)
-            } else if (i >= 3) arcColor = TFT_BLUE;  // Vzdialené úrovne (modrá)
-            else arcColor = TFT_ORANGE;              // Ostatné úrovne (oranžová)
+            if (i == 0) arcColor = TFT_RED;
+            else if (i >= 3) arcColor = TFT_BLUE;
+            else arcColor = TFT_ORANGE;
           }
-          int arcStart = start + (i * WIDTH) + (i * GAP);                                    // Začiatočný uhol oblúka
-          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                // Koncový uhol oblúka
-          reck.drawSmoothArc(-5, -120, arcEnd, arcStart, 325, 0, arcColor, arcColor, true);  // Kreslí oblúk
+          int arcStart = start + (i * WIDTH) + (i * GAP);
+          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);
+          // Vyčistíme len oblasť oblúka
+          downRightReck.drawSmoothArc(-5, -120, arcEnd, arcStart, 325, 0, TFT_GREEN, TFT_GREEN, true);
+          downRightReck.drawSmoothArc(-5, -120, arcEnd, arcStart, 325, 0, arcColor, arcColor, true);
         }
-        reck.pushSprite(165, 80, 0x07E0);  // Zobrazí sprite mriežky na displeji
-        DownRight_Last = level;            // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+        downRightReck.pushSprite(165, 80, 0x07E0); // Predpokladaná pozícia
+        DownRight_Last = level;
       }
       break;
     case 3:
-      // Aktualizuje zobrazenie pre mriežkový senzor 3 (vpravo hore)
       if (level >= 0 && Right_Last != level) {
-        ++start;
-        reck.createSprite(70, 120);  // Vytvorí sprite pre zobrazenie mriežky
-        reck.fillSprite(TFT_GREEN);  // Vyplní sprite zelenou farbou
-
-        // Kreslí oblúky pre jednotlivé úrovne signálu
         for (int i = 0; i < MAX_SMALL_GRID_VALUE; i++) {
-          int arcColor = TFT_BLACK;  // Farba oblúku
+          int arcColor = TFT_BLACK;
           if (level >= (MAX_SMALL_GRID_VALUE - i)) {
-            if (i == 0) arcColor = TFT_RED;  // Najbližšia úroveň (červená)
-            else arcColor = TFT_ORANGE;      // Ostatné úrovne (oranžová)
+            if (i == 0) arcColor = TFT_RED;
+            else arcColor = TFT_ORANGE;
           }
-          int arcStart = start + (i * WIDTH) + (i * GAP);                                                     // Začiatočný uhol oblúka
-          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);                                                 // Koncový uhol oblúka
-          reck.drawSmoothArc(-130, 0, arcEnd, arcStart, 240, 300 - ((3 - i) * 3), arcColor, arcColor, true);  // Kreslí oblúk
+          int arcStart = start + (i * WIDTH) + (i * GAP);
+          int arcEnd = start + ((i + 1) * WIDTH) + (i * GAP);
+          // Vyčistíme len oblasť oblúka
+          rightTopReck.drawSmoothArc(-130, 0, arcEnd, arcStart, 240, 300 - ((3 - i) * 3), TFT_GREEN, TFT_GREEN, true);
+          rightTopReck.drawSmoothArc(-130, 0, arcEnd, arcStart, 240, 300 - ((3 - i) * 3), arcColor, arcColor, true);
         }
-        reck.pushSprite(250, 0, 0x07E0);  // Zobrazí sprite mriežky na displeji
-        Right_Last = level;               // Uloží aktuálnu úroveň signálu pre ďalšie použitie
+        rightTopReck.pushSprite(250, 0, 0x07E0); // Predpokladaná pozícia
+        Right_Last = level;
       }
       break;
   }
-  reck.deleteSprite();  // Odstráni sprite po použití
+  // Už žiadne reck.deleteSprite(); tu
 }
 
 /**
